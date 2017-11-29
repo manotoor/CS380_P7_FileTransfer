@@ -9,8 +9,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.Key;
@@ -90,9 +92,11 @@ public class FileTransfer{
 			while (true) {
 				//wait for new connection
 				Socket socket = serverSocket.accept();
+				System.out.println("Client connected: " + socket.getInetAddress());
 				//input output stream
 				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+				System.out.println("Waiting for message...");
 				//input
 				Message input;
 				while (readInput == true) {
@@ -207,6 +211,15 @@ public class FileTransfer{
 						System.out.println("Error.");
 					}
 				}
+				//reinitialize
+				rsa = Cipher.getInstance("RSA");
+				aes = Cipher.getInstance("AES");
+				crc = new CRC32();
+				seqNum = 0;
+				expectedSequence = 0;
+				fileSize = 0;
+				totalChunk = -1;
+				readInput = true;
 			}
 		} catch (Exception e) {
 			e.printStackTrace(System.err);
@@ -225,7 +238,7 @@ public class FileTransfer{
 		boolean run = true;
 		
 		Socket socket = new Socket(host, port);
-		System.out.println("Connected to server: " + host + "/" + socket.getInetAddress().getHostAddress());
+		System.out.println("Connected to server: " + socket.getInetAddress() + "/" + socket.getPort());
 		//generate AES session key
 		KeyGenerator keyGen = KeyGenerator.getInstance("AES");
 		keyGen.init(128);
@@ -240,10 +253,13 @@ public class FileTransfer{
 		byte[] encryptedSessionKey = rsa.doFinal(sessionKey);
 		
 		Scanner input = new Scanner(System.in);
-		ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-		ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+		OutputStream os = socket.getOutputStream();
+		InputStream is = socket.getInputStream();
+		ObjectOutputStream oos = new ObjectOutputStream(os);
+		ObjectInputStream ois = new ObjectInputStream(is);
 		
-		while (run == true) {
+		
+		while (run) {
 			boolean fileFound = false;
 			String fileName = "";
 			FileInputStream fis = null;
