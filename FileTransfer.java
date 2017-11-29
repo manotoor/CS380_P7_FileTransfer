@@ -1,28 +1,58 @@
+//Manvinder Toor
+//Cs 380
+// file transfer with encryption
+
+
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.Arrays;
+import java.util.Scanner;
+import java.util.zip.CRC32;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
 public class FileTransfer{
-	public static void main(String[] args){
+	public static void main(String[] args) throws Exception{
+		String[] _args = Arrays.copyOf(args, args.length);
 		//get args
 		if (args.length <= 0) {
 			System.out.println("must pass 'makekeys' or 'server file port' or 'client file ip port'");
 		}
 		//if makekeys
-		if(args(0).toString.equals("makekeys")) {
+		else if(_args[0].compareTo("makekeys") == 0) {
+			System.out.println("makekeys");
 			makekeys();
 			
 		//if server
-		}else if(args[0].compareTo("server")) {
-			server(args.toString());
+		}else if(_args[0].compareTo("server") == 0) {
+			server(_args);
 			
 		//if client
-		}else if(args[0].compareTo("client")) {
-			client(args.toString());
+		}else if(_args[0].compareTo("client") == 0) {
+			System.out.println("client");
+			client(_args);
 		//default
 		}else {
 			System.out.println("must pass 'makekeys' | 'server' | 'client'");
 		}
 	}
-	private static void makekeys(String[] args){
-		
-				
+	private static void makekeys(){
 		try {
 			//make RSA Key Pair
 			KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
@@ -42,7 +72,7 @@ public class FileTransfer{
 			e.printStackTrace(System.err);
 		}
 	}
-	private static void server(String[] args){
+	private static void server(String[] args) throws Exception{
 		Cipher rsa = Cipher.getInstance("RSA");
 		Cipher aes = Cipher.getInstance("AES");
 		CRC32 crc = new CRC32();
@@ -56,7 +86,7 @@ public class FileTransfer{
 		int totalChunk = -1;
 		boolean readInput = true;
 		
-		try (ServerSocket serverSocket = new ServerSocket(port)) throws Exception {
+		try (ServerSocket serverSocket = new ServerSocket(port)) {
 			while (true) {
 				//wait for new connection
 				Socket socket = serverSocket.accept();
@@ -117,7 +147,7 @@ public class FileTransfer{
 					//(b) If so, the server should decrypt the data stored in the Chunk using the session key from the transfer initialization step.
 					//(c) Next, the server should calculate the CRC32 value for the decrypted data and compare it with the CRC32 value included in the chunk.
 					//(d) If these values match and the sequence number of the chunk is the next expected sequence number, the server should accept the chunk by storing the data and incrementing the next expected sequence number. 
-					(e) The server should then respond with an AckMessage with sequence number of the next expected chunk.
+					//(e) The server should then respond with an AckMessage with sequence number of the next expected chunk.
 					else if (input.getType() == MessageType.CHUNK) {
 						Chunk chunk = (Chunk)input;
 						int chunkSeq = chunk.getSeq();
@@ -189,9 +219,9 @@ public class FileTransfer{
 		//arg1 = name of keyfile
 		String publicKeyFile = args[1];
 		//arg2 = host ip
-		String host = arguments[2];
+		String host = args[2];
 		//arg3 = port number to server
-		int port = Integer.parseInt(arguments[3]);
+		int port = Integer.parseInt(args[3]);
 		boolean run = true;
 		
 		Socket socket = new Socket(host, port);
@@ -267,7 +297,7 @@ public class FileTransfer{
 				//the client should then send chunk with crc32
 				
 				byte[] chunkData = new byte[chunkSize];
-
+				
 				for (int i = 0; i < fileByteArray.length; i++) {
 					chunkData[i % (chunkSize)] = fileByteArray[i];
 					
@@ -304,6 +334,7 @@ public class FileTransfer{
 					}
 				}
 			}
+			
 			//disconnect
 			run = false;
 			DisconnectMessage disconnect = new DisconnectMessage();
@@ -312,5 +343,4 @@ public class FileTransfer{
 		}
 	}
 
-	}
 }
